@@ -1,9 +1,10 @@
 package id.go.bps.digilib.controllers;
 
+import id.go.bps.digilib.models.TApplicationSettings;
+import id.go.bps.digilib.models.TPublication;
+
 import java.sql.SQLException;
 import java.util.List;
-
-import id.go.bps.digilib.models.TPublication;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -20,7 +21,9 @@ import com.j256.ormlite.dao.Dao;
 @RequestMapping("/")
 public class IndexController {
 	@Autowired
-	Dao<TPublication, Object> tPublication;
+	Dao<TPublication, Object> tPublicationDao;
+	@Autowired
+	Dao<TApplicationSettings, Object> tApplicationSettingsDao;
 	
 	//@RequestMapping(method = RequestMethod.GET)
 	public String index(Model model, HttpServletRequest req, HttpServletResponse resp) {
@@ -29,10 +32,9 @@ public class IndexController {
 	
 	@RequestMapping(method = RequestMethod.GET)
 	public String shelf(Model model) throws SQLException {
-		List<TPublication> pubs = tPublication.queryForAll();
+		List<TPublication> pubs = tPublicationDao.queryForAll();
 		model.addAttribute("pubs", pubs);
 		
 		return "Index";
 	}
-	
 }

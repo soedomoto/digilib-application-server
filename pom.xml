@@ -21,6 +21,8 @@
   	<ormlite-version>4.48</ormlite-version>
 	<slf4j-version>1.7.5</slf4j-version>
 	<postgresql-version>9.1-901.jdbc4</postgresql-version>
+	<pdf-renderer-version>1.0.5</pdf-renderer-version>
+	<commons-io-version>2.4</commons-io-version>
 	
 	<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -87,6 +89,16 @@
 		<groupId>postgresql</groupId>
 		<artifactId>postgresql</artifactId>
 		<version>${postgresql-version}</version>
+	</dependency>
+	<dependency>
+		<groupId>org.swinglabs</groupId>
+		<artifactId>pdf-renderer</artifactId>
+		<version>${pdf-renderer-version}</version>
+	</dependency>
+	<dependency>
+		<groupId>commons-io</groupId>
+		<artifactId>commons-io</artifactId>
+		<version>${commons-io-version}</version>
 	</dependency>
   </dependencies>
   
