@@ -35,7 +35,7 @@ public class TApplicationSettings {
 	private String pdf_folder;
 	@DatabaseField
 	private String cover_folder;
-	@DatabaseField
+	@DatabaseField(columnName = "map_foler")
 	private String map_folder;
 	@DatabaseField
 	private String ftp_server;
