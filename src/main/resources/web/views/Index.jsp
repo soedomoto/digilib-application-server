@@ -9,8 +9,6 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 	<title>BPS Digital Library</title>
 	
-	<script src="/assets/jquery-1.9.1.min.js"></script>
-	
 	<link rel="stylesheet" href="/assets/bootstrap/bootstrap.min.css">
 	<style type="text/css">
 		.book {
@@ -25,6 +23,16 @@
 		    z-index: -1;
 		}
 	</style>
+	
+	<script src="/assets/jquery-1.9.1.min.js"></script>
+	<script type="text/javascript">
+		jQuery(function($) {
+			$(".book").each(function() {
+				$(this).attr("src", $(this).attr("src-url"));
+				$(this).removeAttr("src-url")
+			})
+		});
+	</script>
 </head>
 <body>
 	<%
@@ -32,13 +40,20 @@
 	%>
 	<div class="container">
 	    <div class="row">
-	    <%
-	    	for(TPublication pub : pubs) {
-	    %>
-	    	<div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190&text=<%= pub.getJudul() %>" class="img-responsive book"/></div>
-	    <%
-	    	}
-	    %>
+	    <% int p = 1; %>
+	    <% for(TPublication pub : pubs) { %>
+	    	<div class="col-xs-4 col-md-2">
+	    		<img src-url="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + "/cover" %>" class="img-responsive book"/>
+	    	</div>
+	    	
+	    	<% if(p%6 == 0) { %>
+	    		<div class="col-xs-12 shelf"></div>
+	    	<% } else if(p%3 == 0) { %>
+	    		<div class="col-xs-12 shelf hidden-md hidden-lg"></div>
+	    	<% } %>
+	    	
+	    	<% p++; %>
+	    <% } %>
 	    	
 	        <!-- <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
 	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>

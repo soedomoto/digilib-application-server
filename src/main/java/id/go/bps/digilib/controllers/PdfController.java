@@ -34,7 +34,7 @@ import com.itextpdf.text.pdf.PdfSmartCopy;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.stmt.QueryBuilder;
 
-@Controller
+@Controller("pdfController")
 @RequestMapping("/pdf")
 public class PdfController {
 	@Autowired
@@ -42,11 +42,11 @@ public class PdfController {
 	@Autowired
 	private Dao<TPublication, Object> tPublicationDao;
 	
-	@RequestMapping(method = RequestMethod.GET, value = "/{title}")
-	public void pdf(@PathVariable("title") String title, Model model, HttpServletRequest req, HttpServletResponse resp) 
+	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}")
+	public void pdf(@PathVariable("id") String id, @PathVariable("title") String title, Model model, HttpServletRequest req, HttpServletResponse resp) 
 			throws FileNotFoundException, IOException, SQLException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
-		qb.where().eq("judul", title.replace("-", " "));
+		qb.where().eq("id_publikasi", id);
 		TPublication pub = qb.queryForFirst();
 		String filename = getFilename(pub);
 		
@@ -54,11 +54,11 @@ public class PdfController {
 		IOUtils.copyLarge(new FileInputStream(new File(filename)), resp.getOutputStream());
 	}
 	
-	@RequestMapping(method = RequestMethod.GET, value = "/{title}/{page}")
-	public void pdfPage(@PathVariable("title") String title, @PathVariable("page") Integer page, Model model, HttpServletRequest req, HttpServletResponse resp) 
+	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/{page}")
+	public void pdfPage(@PathVariable("id") String id, @PathVariable("title") String title, @PathVariable("page") Integer page, Model model, HttpServletRequest req, HttpServletResponse resp) 
 			throws FileNotFoundException, IOException, SQLException, DocumentException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
-		qb.where().eq("judul", title.replace("-", " "));
+		qb.where().eq("id_publikasi", id);
 		TPublication pub = qb.queryForFirst();
 		String filename = getFilename(pub);
 		
@@ -66,11 +66,12 @@ public class PdfController {
 		extractPage(page, new FileInputStream(filename), resp.getOutputStream());
 	}
 	
-	@RequestMapping(method = RequestMethod.GET, value = "/{title}/cover")
-	public void pdfCover(@PathVariable("title") String title, Model model, HttpServletRequest req, HttpServletResponse resp) 
+	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/cover")
+	public void pdfCover(@PathVariable("id") String id, @PathVariable("title") String title, Model model, HttpServletRequest req, HttpServletResponse resp) 
 			throws FileNotFoundException, IOException, SQLException, DocumentException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
-		qb.where().eq("judul", title.replace("-", " "));
+		qb.where().eq("id_publikasi", id);
+		//System.out.println(qb.prepareStatementString());
 		TPublication pub = qb.queryForFirst();
 		
         String tmpImgDir = System.getProperty("java.io.tmpdir") + File.separator + "DigilibApplicationServer";//Files.createTempDirectory("DigilibApplicationServer").toFile().getAbsolutePath();
@@ -88,14 +89,14 @@ public class PdfController {
         }
 	}
 	
-	private String getFilename(TPublication pub) {
+	public String getFilename(TPublication pub) {
 		return sharedPdf + File.separator + pub.getKd_bahan_pustaka() + File.separator + 
 				pub.getKd_bahan_pustaka() + "_" + pub.getKd_subyek() + "_" + pub.getKd_produsen() + "_" + 
 				pub.getTahun_terbit() + "_" + pub.getKd_periode() + "_" + pub.getIs_full_entry() + "_" + 
 				pub.getJudul().replace(" ", "-") + ".pdf";
 	}
 	
-	private String getCoverName(TPublication pub) {
+	public String getCoverName(TPublication pub) {
 		return pub.getKd_bahan_pustaka() + "_" + pub.getKd_subyek() + "_" + pub.getKd_produsen() + "_" + 
 				pub.getTahun_terbit() + "_" + pub.getKd_periode() + "_" + pub.getIs_full_entry() + "_" + 
 				pub.getJudul().replace(" ", "-") + ".jpg";

@@ -3,7 +3,9 @@ package id.go.bps.digilib.controllers;
 import id.go.bps.digilib.models.TApplicationSettings;
 import id.go.bps.digilib.models.TPublication;
 
+import java.io.File;
 import java.sql.SQLException;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.servlet.http.HttpServletRequest;
@@ -21,9 +23,11 @@ import com.j256.ormlite.dao.Dao;
 @RequestMapping("/")
 public class IndexController {
 	@Autowired
-	Dao<TPublication, Object> tPublicationDao;
+	private PdfController pdfController;
 	@Autowired
-	Dao<TApplicationSettings, Object> tApplicationSettingsDao;
+	private Dao<TPublication, Object> tPublicationDao;
+	@Autowired
+	private Dao<TApplicationSettings, Object> tApplicationSettingsDao;
 	
 	//@RequestMapping(method = RequestMethod.GET)
 	public String index(Model model, HttpServletRequest req, HttpServletResponse resp) {
@@ -33,8 +37,16 @@ public class IndexController {
 	@RequestMapping(method = RequestMethod.GET)
 	public String shelf(Model model) throws SQLException {
 		List<TPublication> pubs = tPublicationDao.queryForAll();
-		model.addAttribute("pubs", pubs);
+		Iterator<TPublication> itr = pubs.iterator();
+		while(itr.hasNext()) {
+			TPublication pub = itr.next();
+			String filename = pdfController.getFilename(pub);
+			if(! new File(filename).exists()) {
+				itr.remove();
+			}
+		}
 		
+		model.addAttribute("pubs", pubs);
 		return "Index";
 	}
 }
