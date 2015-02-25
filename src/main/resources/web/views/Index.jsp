@@ -1,13 +1,12 @@
 <%@page import="id.go.bps.digilib.models.TPublication"%>
 <%@page import="java.util.List"%>
-<%@ page language="java" contentType="text/html; charset=ISO-8859-1"
-    pageEncoding="ISO-8859-1"%>
+<%@ page language="java" contentType="text/html; charset=ISO-8859-1" pageEncoding="ISO-8859-1"%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html lang="en">
 <head>
 	<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
-	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
 	<title>BPS Digital Library</title>
+	<link rel='shortcut icon' type='image/x-icon' href='/assets/favicon.ico' />
 	
 	<link rel="stylesheet" href="/assets/bootstrap/bootstrap.min.css">
 	<style type="text/css">
@@ -35,15 +34,15 @@
 	</script>
 </head>
 <body>
-	<%
-		List<TPublication> pubs = (List<TPublication>) request.getAttribute("pubs");
-	%>
+	<% List<TPublication> pubs = (List<TPublication>) request.getAttribute("pubs"); %>
 	<div class="container">
 	    <div class="row">
 	    <% int p = 1; %>
 	    <% for(TPublication pub : pubs) { %>
 	    	<div class="col-xs-4 col-md-2">
-	    		<img src-url="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + "/cover" %>" class="img-responsive book"/>
+		    	<a target="_BLANK_" href="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") %>">
+		    		<img src-url="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + "/cover" %>" class="img-responsive book"/>
+		    	</a>
 	    	</div>
 	    	
 	    	<% if(p%6 == 0) { %>

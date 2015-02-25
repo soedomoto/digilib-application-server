@@ -11,9 +11,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.sql.SQLException;
+import java.util.HashMap;
 
 import javax.imageio.ImageIO;
-import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
@@ -43,7 +43,27 @@ public class PdfController {
 	private Dao<TPublication, Object> tPublicationDao;
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}")
-	public void pdf(@PathVariable("id") String id, @PathVariable("title") String title, Model model, HttpServletRequest req, HttpServletResponse resp) 
+	public String viewer(@PathVariable("id") String id, @PathVariable("title") String title, Model model) 
+			throws FileNotFoundException, IOException, SQLException {
+		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
+		qb.where().eq("id_publikasi", id);
+		TPublication pub = qb.queryForFirst();
+		
+		final PdfReader reader = new PdfReader(getFilename(pub));
+		
+		model.addAttribute("publication", pub);
+		model.addAttribute("properties", new HashMap<String, Object>() {
+			private static final long serialVersionUID = 1L;
+			{
+				put("numPages", reader.getNumberOfPages());
+			}
+		});
+		
+		return "Flipbook";
+	}
+	
+	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/download")
+	public void download(@PathVariable("id") String id, @PathVariable("title") String title, HttpServletResponse resp) 
 			throws FileNotFoundException, IOException, SQLException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
 		qb.where().eq("id_publikasi", id);
@@ -55,7 +75,7 @@ public class PdfController {
 	}
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/{page}")
-	public void pdfPage(@PathVariable("id") String id, @PathVariable("title") String title, @PathVariable("page") Integer page, Model model, HttpServletRequest req, HttpServletResponse resp) 
+	public void pdfPage(@PathVariable("id") String id, @PathVariable("title") String title, @PathVariable("page") Integer page,  HttpServletResponse resp) 
 			throws FileNotFoundException, IOException, SQLException, DocumentException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
 		qb.where().eq("id_publikasi", id);
@@ -67,7 +87,7 @@ public class PdfController {
 	}
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/cover")
-	public void pdfCover(@PathVariable("id") String id, @PathVariable("title") String title, Model model, HttpServletRequest req, HttpServletResponse resp) 
+	public void pdfCover(@PathVariable("id") String id, @PathVariable("title") String title, HttpServletResponse resp) 
 			throws FileNotFoundException, IOException, SQLException, DocumentException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
 		qb.where().eq("id_publikasi", id);

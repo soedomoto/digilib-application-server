@@ -23,9 +23,9 @@ PDFJS.disableWorker = true;
 		
 		jpdfjs = $.extend(jpdfjs, {
 			numPages : 0, 
-			pdfObject = null, 
-			textRaw = "", 
-			textDivs = [], 
+			pdfObject : null, 
+			textRaw : "", 
+			textDivs : [], 
 			open : function(src) {
 				options.onBeforePdfOpened(jpdfjs, src);
 				PDFJS.getDocument(src).then(
@@ -59,7 +59,7 @@ PDFJS.disableWorker = true;
 	                if(isExtractText) {
 	                	jpdfjs.extractText(pageNumber, pageObject, scale);
 	                }
-				}
+				});
 			}, 
 			extractText : function(pageNumber, pageObject, scale) {
 				options.onBeforeTextExtracted(jpdfjs, pageNumber);
