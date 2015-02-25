@@ -33,7 +33,7 @@ public class ModelConfig {
 	@Bean(name = "sharedPdf")
 	@DependsOn(value = {"tApplicationSettingsDao"})
 	public String sharedPdf() throws SQLException {
-		TApplicationSepgttings setting = tApplicationSettingsDao().queryBuilder().queryForFirst();
+		TApplicationSettings setting = tApplicationSettingsDao().queryBuilder().queryForFirst();
 		return File.separator + File.separator + setting.getServer_name() + File.separator + setting.getPdf_folder();
 	}
 }
