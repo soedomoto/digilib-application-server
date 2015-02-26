@@ -10,7 +10,7 @@ PDFJS.disableWorker = true;
 (function($) {
 	$.fn.jPdfjs = function(options) {
 		var jpdfjs = this;
-		var options = $.extend(options, {
+		var options = $.extend({
 			onBeforePdfOpened : function() {}, 
 			onPdfOpened : function() {}, 
 			onPdfOpenedError : function() {}, 
@@ -19,20 +19,21 @@ PDFJS.disableWorker = true;
 			onPdfRendered : function() {}, 
 			onBeforeTextExtracted : function() {}, 
 			onTextExtracted : function() {}
-		});
+		}, options);
 		
 		jpdfjs = $.extend(jpdfjs, {
 			numPages : 0, 
 			pdfObject : null, 
 			textRaw : "", 
 			textDivs : [], 
+			options : options,
 			open : function(src) {
 				options.onBeforePdfOpened(jpdfjs, src);
 				PDFJS.getDocument(src).then(
 					function getDocumentCallback(pdf) {
-						options.onPdfOpened(jpdfjs, pdf);
 						jpdfjs.numPages = pdf.numPages;
 						jpdfjs.pdfObject = pdf;
+						options.onPdfOpened(jpdfjs, pdf, jpdfjs.numPages);
 					}, 
 					function getDocumentError(message, exception) {
 						options.onPdfOpenedError(jpdfjs, message, exception);
@@ -42,10 +43,12 @@ PDFJS.disableWorker = true;
 						options.onPdfOpenedProgress(jpdfjs, percentage);
 					}
 				);
+				
+				return jpdfjs;
 			}, 
 			renderPage : function(pageNumber, canvas, scale, isExtractText) {
 				options.onBeforePdfRendered(jpdfjs, pageNumber, canvas, scale, isExtractText);
-				pdf.getPage(pageNumber).then(function(pageObject) {
+				jpdfjs.pdfObject.getPage(pageNumber).then(function(pageObject) {
 					var viewport = pageObject.getViewport(scale);
 	                var context = canvas.getContext('2d');
 	                canvas.height = viewport.height;
@@ -60,6 +63,8 @@ PDFJS.disableWorker = true;
 	                	jpdfjs.extractText(pageNumber, pageObject, scale);
 	                }
 				});
+				
+				return jpdfjs;
 			}, 
 			extractText : function(pageNumber, pageObject, scale) {
 				options.onBeforeTextExtracted(jpdfjs, pageNumber);

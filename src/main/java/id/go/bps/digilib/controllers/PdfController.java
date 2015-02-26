@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 
 import javax.imageio.ImageIO;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
@@ -28,9 +29,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.pdf.PdfCopy;
 import com.itextpdf.text.pdf.PdfImportedPage;
 import com.itextpdf.text.pdf.PdfReader;
-import com.itextpdf.text.pdf.PdfSmartCopy;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.stmt.QueryBuilder;
 
@@ -43,7 +44,7 @@ public class PdfController {
 	private Dao<TPublication, Object> tPublicationDao;
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}")
-	public String viewer(@PathVariable("id") String id, @PathVariable("title") String title, Model model) 
+	public String viewer(@PathVariable("id") final String id, @PathVariable("title") final String title, Model model, final HttpServletRequest req) 
 			throws FileNotFoundException, IOException, SQLException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
 		qb.where().eq("id_publikasi", id);
@@ -56,6 +57,9 @@ public class PdfController {
 			private static final long serialVersionUID = 1L;
 			{
 				put("numPages", reader.getNumberOfPages());
+				put("baseUrl", req.getScheme() + "://" + req.getServerName() + ":" + req.getServerPort() + 
+						req.getContextPath() + "/pdf/" + id + "/" + title);
+				put("docSize", reader.getPageSize(3));
 			}
 		});
 		
@@ -125,8 +129,8 @@ public class PdfController {
 	private void extractPage(int page, InputStream input, OutputStream output) throws IOException, DocumentException {
 		PdfReader reader = new PdfReader(input);
 		Document document = new Document(reader.getPageSizeWithRotation(1));
-		PdfSmartCopy writer = new PdfSmartCopy(document, output);
-        writer.setFullCompression();
+		PdfCopy writer = new PdfCopy(document, output);
+        //writer.setFullCompression();
         document.open();
         PdfImportedPage pdfPage = writer.getImportedPage(reader, page);
         writer.addPage(pdfPage);
