@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import id.go.bps.digilib.models.TApplicationSettings;
 import id.go.bps.digilib.models.TPublication;
 
+import org.apache.commons.lang.SystemUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,6 +35,10 @@ public class ModelConfig {
 	@DependsOn(value = {"tApplicationSettingsDao"})
 	public String sharedPdf() throws SQLException {
 		TApplicationSettings setting = tApplicationSettingsDao().queryBuilder().queryForFirst();
-		return File.separator + File.separator + setting.getServer_name() + File.separator + setting.getPdf_folder();
+		if(SystemUtils.IS_OS_WINDOWS) {
+			return File.separator + File.separator + setting.getServer_name() + File.separator + setting.getPdf_folder();
+		} else {
+			return "smb:" + File.separator + File.separator + setting.getServer_name() + File.separator + setting.getPdf_folder();
+		}
 	}
 }

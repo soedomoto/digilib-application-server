@@ -17,7 +17,11 @@ import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import jcifs.smb.NtlmPasswordAuthentication;
+import jcifs.smb.SmbFile;
+
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.SystemUtils;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,6 +46,11 @@ public class PdfController {
 	private String sharedPdf;
 	@Autowired
 	private Dao<TPublication, Object> tPublicationDao;
+	private NtlmPasswordAuthentication ntlmAuth;
+	
+	public PdfController() {
+		ntlmAuth = new NtlmPasswordAuthentication(null);
+	}
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}")
 	public String viewer(@PathVariable("id") final String id, @PathVariable("title") final String title, Model model, final HttpServletRequest req) 
@@ -50,7 +59,15 @@ public class PdfController {
 		qb.where().eq("id_publikasi", id);
 		TPublication pub = qb.queryForFirst();
 		
-		final PdfReader reader = new PdfReader(getFilename(pub));
+		String filename = getFilename(pub);
+		InputStream is = null;
+		if(SystemUtils.IS_OS_WINDOWS) {
+			is = new FileInputStream(new File(filename));
+		} else {
+			is = new SmbFile(filename).getInputStream();
+		}
+		
+		final PdfReader reader = new PdfReader(is);
 		
 		model.addAttribute("publication", pub);
 		model.addAttribute("properties", new HashMap<String, Object>() {
@@ -74,8 +91,15 @@ public class PdfController {
 		TPublication pub = qb.queryForFirst();
 		String filename = getFilename(pub);
 		
+		InputStream is = null;
+		if(SystemUtils.IS_OS_WINDOWS) {
+			is = new FileInputStream(new File(filename));
+		} else {
+			is = new SmbFile(filename).getInputStream();
+		}
+		
 		resp.setContentType("application/pdf");
-		IOUtils.copyLarge(new FileInputStream(new File(filename)), resp.getOutputStream());
+		IOUtils.copyLarge(is, resp.getOutputStream());
 	}
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/{page}")
@@ -86,8 +110,15 @@ public class PdfController {
 		TPublication pub = qb.queryForFirst();
 		String filename = getFilename(pub);
 		
+		InputStream is = null;
+		if(SystemUtils.IS_OS_WINDOWS) {
+			is = new FileInputStream(new File(filename));
+		} else {
+			is = new SmbFile(filename).getInputStream();
+		}
+		
 		resp.setContentType("application/pdf");
-		extractPage(page, new FileInputStream(filename), resp.getOutputStream());
+		extractPage(page, is, resp.getOutputStream());
 	}
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/cover")
@@ -104,8 +135,16 @@ public class PdfController {
         if(new File(tmpCoverFile).exists()) {
         	IOUtils.copy(new FileInputStream(tmpCoverFile), resp.getOutputStream());
         } else {
-        	String filename = getFilename(pub);		
-    		PDDocument doc = PDDocument.loadNonSeq(new File(filename), null);
+        	String filename = getFilename(pub);
+        	
+        	InputStream is = null;
+    		if(SystemUtils.IS_OS_WINDOWS) {
+    			is = new FileInputStream(new File(filename));
+    		} else {
+    			is = new SmbFile(filename).getInputStream();
+    		}
+        	
+    		PDDocument doc = PDDocument.loadNonSeq(is, null);
     		PDPage pdfPage = (PDPage) doc.getDocumentCatalog().getAllPages().get(0);
     		BufferedImage bi = pdfPage.convertToImage();
     		ImageIO.write(bi, "jpg", resp.getOutputStream());

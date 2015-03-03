@@ -4,6 +4,7 @@ import id.go.bps.digilib.models.TApplicationSettings;
 import id.go.bps.digilib.models.TPublication;
 
 import java.io.File;
+import java.net.MalformedURLException;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
@@ -11,6 +12,10 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import jcifs.smb.SmbException;
+import jcifs.smb.SmbFile;
+
+import org.apache.commons.lang.SystemUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -35,14 +40,17 @@ public class IndexController {
 	}
 	
 	@RequestMapping(method = RequestMethod.GET)
-	public String shelf(Model model) throws SQLException {
+	public String shelf(Model model) throws SQLException, SmbException, MalformedURLException {
 		List<TPublication> pubs = tPublicationDao.queryForAll();
 		Iterator<TPublication> itr = pubs.iterator();
 		while(itr.hasNext()) {
 			TPublication pub = itr.next();
 			String filename = pdfController.getFilename(pub);
-			if(! new File(filename).exists()) {
-				itr.remove();
+			
+			if(SystemUtils.IS_OS_WINDOWS) {
+				if(! new File(filename).exists()) itr.remove();
+			} else {
+				if(! new SmbFile(filename).exists())  itr.remove();
 			}
 		}
 		

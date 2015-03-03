@@ -21,6 +21,17 @@
 		    top: -15px;
 		    z-index: -1;
 		}
+		.shelf:after {
+			background:url(../pics/wall-bookshelf.png);
+			background-size:100%;
+			background-repeat: no-repeat;
+			background-position:bottom left;
+			width:426px;
+			height:210px;
+			display:block;
+			content:"";
+			margin-left:-38px;
+		}
 	</style>
 	
 	<script src="/assets/jquery-1.9.1.min.js"></script>
