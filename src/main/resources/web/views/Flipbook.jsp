@@ -8,6 +8,7 @@
 <% TPublication pub = (TPublication) request.getAttribute("publication"); %>
 <% Map<String, Object> properties = (HashMap<String, Object>) request.getAttribute("properties"); %>
 <% Rectangle docSize = (Rectangle) properties.get("docSize"); %>
+<% String format = (String) properties.get("format"); %>
 <html lang="en">
 <head>
 	<title><%= pub.getJudul() %></title>
@@ -34,6 +35,7 @@
 	<script type="text/javascript">
 		var flipbook = $('.magazine');
 		var viewport = $('.magazine-viewport');
+		var format = '<%= format %>';
 		
 		function loadFlipbook() {
 			$('#canvas').fadeIn(1000);
@@ -75,17 +77,30 @@
 		 						$('<div class="gradient">').appendTo(element);
 		 						$('<div class="loader">').appendTo(element);
 		 						
-		 						var pdfjs = element.jPdfjs({
-		 							onPdfOpened: function(jpdfjs, pdf, numPages) {
-		 								jpdfjs.renderPage(1, $('<canvas>').get(0), 1, false);
-		 							}, 
-		 							onPdfRendered: function(jpdfjs, pageNumber, canvas, scale, pageObject) {
-		 								$(canvas).appendTo(jpdfjs);
-		 								rezoomCanvas();
-		 								$(jpdfjs.get(0)).find('.loader').remove();
-		 							}
-		 						});
-		 						pdfjs.open('<%= properties.get("baseUrl") %>/' + page);
+		 						if(format == "pdf") {
+			 						var pdfjs = element.jPdfjs({
+			 							onPdfOpened: function(jpdfjs, pdf, numPages) {
+			 								jpdfjs.renderPage(1, $('<canvas>').get(0), 1, false);
+			 							}, 
+			 							onPdfRendered: function(jpdfjs, pageNumber, canvas, scale, pageObject) {
+			 								$(canvas).appendTo(jpdfjs);
+			 								rezoomCanvas();
+			 								$(jpdfjs.get(0)).find('.loader').remove();
+			 							}
+			 						});
+			 						pdfjs.open('<%= properties.get("baseUrl") %>/' + page);
+			 					} else if(format == "jpg") {
+			 						var img = $('<img />').data(element);
+			 						img.mousedown(function(e) {
+			 							e.preventDefault();
+			 						});
+			 						img.load(function() {
+			 							$(this).css({width: '100%', height: '100%'});
+			 							$(this).appendTo($(this).data());
+			 							element.find('.loader').remove();
+			 						});
+			 						img.attr('src', '<%= properties.get("baseUrl") %>/' + page + '/jpg');
+			 					}
 		 					}
 		 				}
 		 			}

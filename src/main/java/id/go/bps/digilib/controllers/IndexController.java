@@ -4,6 +4,7 @@ import id.go.bps.digilib.models.TApplicationSettings;
 import id.go.bps.digilib.models.TPublication;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -16,17 +17,21 @@ import jcifs.smb.SmbException;
 import jcifs.smb.SmbFile;
 
 import org.apache.commons.lang.SystemUtils;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
+import com.itextpdf.text.DocumentException;
 import com.j256.ormlite.dao.Dao;
 
-@Controller
+@Controller("indexController")
+@DependsOn(value = {"pdfController"})
 @RequestMapping("/")
-public class IndexController {
+public class IndexController implements InitializingBean {
 	@Autowired
 	private PdfController pdfController;
 	@Autowired
@@ -56,5 +61,21 @@ public class IndexController {
 		
 		model.addAttribute("pubs", pubs);
 		return "Index";
+	}
+
+	@Override
+	public void afterPropertiesSet() throws Exception {
+		/*new Thread() {
+			public void run() {
+				try {
+					Thread.sleep(5000);
+					System.out.println("----------- STARTING CONVERT IMAGE --------------------");
+					pdfController.convertToImage();
+				} catch (SQLException | IOException | DocumentException | InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			};
+		}.start();*/
 	}
 }
