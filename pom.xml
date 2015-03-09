@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>id.go.bps</groupId>
   <artifactId>DigilibApplicationServer</artifactId>
-  <version>0.1-beta</version>
+  <version>0.2-beta</version>
   <description>Suplement For PST BPS</description>
   <developers>
   	<developer>

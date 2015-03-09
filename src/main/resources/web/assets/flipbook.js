@@ -95,3 +95,7 @@ function rezoomCanvas() {
 		$(this).css('zoom', zoom);
 	});
 }
+
+function largeMagazineWidth() {
+	return 2000;
+}

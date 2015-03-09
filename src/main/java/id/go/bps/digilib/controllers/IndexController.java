@@ -42,6 +42,8 @@ public class IndexController implements InitializingBean {
 	private Dao<TApplicationSettings, Object> tApplicationSettingsDao;
 	@Value("${flipbook.autoConvert}")
 	private boolean autoconvert;
+	@Value("${flipbook.autoConvertAtStartup}")
+	private boolean autoConvertAtStartup;
 	@Value("${flipbook.autoConvertInterval}")
 	private int autoConvertInterval;
 	@Value("${flipbook.pageFormat}")
@@ -75,7 +77,7 @@ public class IndexController implements InitializingBean {
 	@Override
 	public void afterPropertiesSet() throws Exception {
 		if(autoconvert) {
-			//autoConvert();
+			if(autoConvertAtStartup) autoConvert();
 			new Timer().schedule(new TimerTask() {
 				@Override
 				public void run() {
@@ -94,7 +96,6 @@ public class IndexController implements InitializingBean {
 					Toolkit.getDefaultToolkit().beep();
 					pdfController.convertAllPublicationsToImage();
 				} catch (Exception e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			};

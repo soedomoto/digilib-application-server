@@ -120,11 +120,10 @@
 						$(this).zoom('flipbook').turn('previous');
 					},
 					resize: function(event, scale, page, pageElement) {
-						/* if (scale==1) {
-							loadSmallPage(page, pageElement);
-						} else {
-							loadLargePage(page, pageElement);
-						} */
+						if (scale!=1) {
+							var c = pageElement.find('canvas');
+							c.css('zoom', scale * c.css('zoom'));
+						}
 					},
 					zoomIn: function () {
 						flipbook.removeClass('animated').addClass('zoom-in');
@@ -223,7 +222,23 @@
 			}).click(function() {
 				flipbook.turn('previous');
 			});
-
+			
+			$('.zoom-icon').bind('mouseover', function() {
+				if ($(this).hasClass('zoom-icon-in'))
+					$(this).addClass('zoom-icon-in-hover');
+				if ($(this).hasClass('zoom-icon-out'))
+			 		$(this).addClass('zoom-icon-out-hover');
+			}).bind('mouseout', function() {
+				if ($(this).hasClass('zoom-icon-in'))
+					$(this).removeClass('zoom-icon-in-hover');
+				if ($(this).hasClass('zoom-icon-out'))
+					$(this).removeClass('zoom-icon-out-hover');
+			}).bind('click', function() {
+				if ($(this).hasClass('zoom-icon-in'))
+					$('.magazine-viewport').zoom('zoomIn');
+				else if ($(this).hasClass('zoom-icon-out'))	
+					$('.magazine-viewport').zoom('zoomOut');
+			});
 
 			resizeViewport();
 			flipbook.addClass('animated');

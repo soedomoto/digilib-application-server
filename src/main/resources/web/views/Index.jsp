@@ -62,7 +62,7 @@
 	    <% int p = 1; %>
 	    <% for(TPublication pub : pubs) { %>
 	    	<div class="col-xs-4 col-md-2 book-holder">
-		    	<a target="_BLANK_" href="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + (format=="jpg" ? "/jpg" : "") %>">
+		    	<a target="_BLANK_" href="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + (format.equalsIgnoreCase("jpg") ? "/jpg" : "") %>">
 		    		<img src-url="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + "/1/jpg" %>" class="img-responsive book"/>
 		    	</a>
 	    	</div>
