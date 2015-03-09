@@ -5,12 +5,10 @@ import id.go.bps.digilib.controllers.PdfController;
 import id.go.bps.digilib.utils.ClasspathUtil;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.sql.SQLException;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -18,8 +16,6 @@ import org.eclipse.jetty.servlet.ServletHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
 import org.springframework.web.servlet.DispatcherServlet;
-
-import com.itextpdf.text.DocumentException;
 
 public class DigilibApplication {
 	//private static final Logger log = LoggerFactory.getLogger(TCServer.class);

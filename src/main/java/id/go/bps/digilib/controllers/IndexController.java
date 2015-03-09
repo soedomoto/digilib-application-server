@@ -4,7 +4,6 @@ import id.go.bps.digilib.models.TApplicationSettings;
 import id.go.bps.digilib.models.TPublication;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -25,7 +24,6 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import com.itextpdf.text.DocumentException;
 import com.j256.ormlite.dao.Dao;
 
 @Controller("indexController")
@@ -65,17 +63,17 @@ public class IndexController implements InitializingBean {
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
-		/*new Thread() {
+		new Thread() {
 			public void run() {
 				try {
 					Thread.sleep(5000);
 					System.out.println("----------- STARTING CONVERT IMAGE --------------------");
-					pdfController.convertToImage();
-				} catch (SQLException | IOException | DocumentException | InterruptedException e) {
+					pdfController.convertAllPublicationsToImage();
+				} catch (Exception e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			};
-		}.start();*/
+		}.start();
 	}
 }

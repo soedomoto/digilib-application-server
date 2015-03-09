@@ -97,7 +97,7 @@
 			 						img.load(function() {
 			 							$(this).css({width: '100%', height: '100%'});
 			 							$(this).appendTo($(this).data());
-			 							element.find('.loader').remove();
+			 							$(this).data().find('.loader').remove();
 			 						});
 			 						img.attr('src', '<%= properties.get("baseUrl") %>/' + page + '/jpg');
 			 					}

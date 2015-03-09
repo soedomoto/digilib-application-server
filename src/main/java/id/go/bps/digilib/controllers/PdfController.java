@@ -1,10 +1,11 @@
 package id.go.bps.digilib.controllers;
 
+import static org.sejda.core.support.io.IOUtils.createTemporaryBuffer;
+import static org.sejda.impl.icepdf.component.PdfToBufferedImageProvider.toBufferedImage;
 import id.go.bps.digilib.models.TPublication;
+import id.go.bps.digilib.task.ADirectoryTaskOutput;
+import id.go.bps.digilib.task.BasePdfToImageTask;
 
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -17,17 +18,27 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
-import javax.imageio.ImageIO;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import jcifs.smb.SmbException;
 import jcifs.smb.SmbFile;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
+import org.sejda.impl.icepdf.component.DefaultPdfSourceOpener;
+import org.sejda.model.exception.TaskException;
+import org.sejda.model.exception.TaskExecutionException;
+import org.sejda.model.input.PdfSourceOpener;
+import org.sejda.model.input.PdfStreamSource;
+import org.sejda.model.parameter.image.AbstractPdfToImageParameters;
+import org.sejda.model.parameter.image.AbstractPdfToMultipleImageParameters;
+import org.sejda.model.parameter.image.PdfToJpegParameters;
+import org.sejda.model.pdf.page.PageRange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -155,79 +166,54 @@ public class PdfController {
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/{page}/jpg")
 	public void pdfPageJpg(@PathVariable("id") String id, @PathVariable("title") String title, @PathVariable("page") Integer page,  HttpServletResponse resp) 
-			throws FileNotFoundException, IOException, SQLException, DocumentException {
+			throws FileNotFoundException, IOException, SQLException, DocumentException, TaskException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
 		qb.where().eq("id_publikasi", id);
 		TPublication pub = qb.queryForFirst();
 		String filename = getFilename(pub);
 		
-		InputStream is = null;
-		if(SystemUtils.IS_OS_WINDOWS) {
-			is = new FileInputStream(new File(filename));
-		} else {
-			is = new SmbFile(filename).getInputStream();
-		}
-		
-		boolean exists = false;
 		String jpgName = filename.replace(".pdf", "") + File.separator + page + ".jpg";
-		if(SystemUtils.IS_OS_WINDOWS) {
-			if(new File(jpgName).exists()) {
-				exists = true;
-				IOUtils.copy(new FileInputStream(jpgName), resp.getOutputStream());
+		while(true) {
+			if(exists(jpgName)) {
+				IOUtils.copy(getInputStream(jpgName), resp.getOutputStream());
+				break;
 			}
-		} else {
-			SmbFile s = new SmbFile(jpgName);
-			if(s.exists()) {
-				exists = true;
-				IOUtils.copy(s.getInputStream(), resp.getOutputStream());
-			}
-		}
-		
-		if(!exists) {
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			extractPageToJpeg(page, is, baos);
-			IOUtils.copy(new ByteArrayInputStream(baos.toByteArray()), resp.getOutputStream());
-			if(SystemUtils.IS_OS_WINDOWS) {
-				File oDir = new File(jpgName).getParentFile();
-				if(! oDir.exists()) oDir.mkdirs();
-				IOUtils.copy(new ByteArrayInputStream(baos.toByteArray()), new FileOutputStream(jpgName));
-			} else {
-				SmbFile oDir = new SmbFile(new SmbFile(jpgName).getParent());
-				if(! oDir.exists()) oDir.mkdirs();
-				IOUtils.copy(new ByteArrayInputStream(baos.toByteArray()), new SmbFile(jpgName).getOutputStream());
-			}
+			
+			convertPublicationToImage(pub, filename, new PageRange(page, page));
 		}
 	}
 	
-	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/cover")
-	public void pdfCover(@PathVariable("id") String id, @PathVariable("title") String title, HttpServletResponse resp) 
-			throws FileNotFoundException, IOException, SQLException, DocumentException {
-		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
-		qb.where().eq("id_publikasi", id);
-		//System.out.println(qb.prepareStatementString());
-		TPublication pub = qb.queryForFirst();
+	public boolean exists(String filename) throws MalformedURLException, SmbException {
+		if(SystemUtils.IS_OS_WINDOWS) {
+			if(new File(filename).exists()) {
+				return true;
+			}
+		} else {
+			SmbFile s = new SmbFile(filename);
+			if(s.exists()) {
+				return true;
+			}
+		}
 		
-        String tmpImgDir = System.getProperty("java.io.tmpdir") + File.separator + "DigilibApplicationServer";//Files.createTempDirectory("DigilibApplicationServer").toFile().getAbsolutePath();
-        new File(tmpImgDir).mkdirs();
-        String tmpCoverFile = tmpImgDir + File.separator + getCoverName(pub);
-        if(new File(tmpCoverFile).exists()) {
-        	IOUtils.copy(new FileInputStream(tmpCoverFile), resp.getOutputStream());
-        } else {
-        	String filename = getFilename(pub);
-        	
-        	InputStream is = null;
-    		if(SystemUtils.IS_OS_WINDOWS) {
-    			is = new FileInputStream(new File(filename));
-    		} else {
-    			is = new SmbFile(filename).getInputStream();
-    		}
-        	
-    		PDDocument doc = PDDocument.loadNonSeq(is, null);
-    		PDPage pdfPage = (PDPage) doc.getDocumentCatalog().getAllPages().get(0);
-    		BufferedImage bi = pdfPage.convertToImage();
-    		ImageIO.write(bi, "jpg", resp.getOutputStream());
-    		ImageIO.write(bi, "jpg", new FileOutputStream(tmpCoverFile));
-        }
+		return false;
+	}
+	
+	public InputStream getInputStream(String filename) throws IOException {
+		if(SystemUtils.IS_OS_WINDOWS) {
+			return new FileInputStream(filename);
+		} else {
+			SmbFile s = new SmbFile(filename);
+			return s.getInputStream();
+		}
+	}
+	
+	public OutputStream getOutputStream(String filename) throws IOException {
+		if(SystemUtils.IS_OS_WINDOWS) {
+			return new FileOutputStream(filename);
+		} else {
+			SmbFile s = new SmbFile(filename);
+			return s.getOutputStream();
+		}
 	}
 	
 	public String getFilename(TPublication pub) {
@@ -255,91 +241,96 @@ public class PdfController {
         writer.close();
 	}
 	
-	/**
-	 * 
-	 * @param page Start from 1
-	 * @param is
-	 * @param os
-	 * @return 
-	 * @throws IOException 
-	 */
-	private void extractPageToJpeg(int page, InputStream is, OutputStream os) throws IOException {
-		PDDocument doc = PDDocument.loadNonSeq(is, null);
-		PDPage pdfPage = (PDPage) doc.getDocumentCatalog().getAllPages().get(page-1);
-		BufferedImage bi = pdfPage.convertToImage();
-		ImageIO.write(bi, "jpg", os);
-	}
-	
-	public void convertToImage() throws SQLException, IOException, DocumentException {
+	public void convertAllPublicationsToImage() throws SQLException, IOException, DocumentException, TaskException {
 		List<TPublication> pubs = tPublicationDao.queryForAll();
 		Iterator<TPublication> itr = pubs.iterator();
 		while(itr.hasNext()) {
-			TPublication pub = itr.next();
-			String filename = getFilename(pub);
+			final TPublication pub = itr.next();
+			final String filename = getFilename(pub);
 			
-			if(SystemUtils.IS_OS_WINDOWS) {
-				if(new File(filename).exists()) {
-					convertPubToImage(pub, filename);
-				}
-			} else {
-				if(new SmbFile(filename).exists()) {
-					convertPubToImage(pub, filename);
-				}
-			}
-		}
-	}
-	
-	private void convertPubToImage(TPublication pub, final String filename) throws MalformedURLException, IOException, DocumentException {
-		String oDir;
-		if(SystemUtils.IS_OS_WINDOWS) {
-			File outDir = new File(filename.replace(".pdf", ""));
-			outDir.mkdirs();
-			oDir = outDir.getPath();
-		} else {
-			SmbFile outDir = new SmbFile(filename.replace(".pdf", ""));
-			outDir.mkdirs();
-			oDir = outDir.getPath();
-		}
-		
-		InputStream pdfIs = null;
-		if(SystemUtils.IS_OS_WINDOWS) {
-			pdfIs = new FileInputStream(new File(filename));
-		} else {
-			pdfIs = new SmbFile(filename).getInputStream();
-		}
-		
-		final String oDirTmp = oDir;
-		PdfReader reader = new PdfReader(pdfIs);
-		for(int i=1; i<reader.getNumberOfPages()+1; i++) {
-			final int iTmp = i;
 			new Thread() {
 				public void run() {
 					try {
-						InputStream jpgIs = null;
 						if(SystemUtils.IS_OS_WINDOWS) {
-							jpgIs = new FileInputStream(new File(filename));
+							if(new File(filename).exists()) {
+								convertPublicationToImage(pub, filename, new PageRange(1, 1));
+								convertPublicationToImage(pub, filename, new PageRange(2));
+							}
 						} else {
-							jpgIs = new SmbFile(filename).getInputStream();
+							if(new SmbFile(filename).exists()) {
+								convertPublicationToImage(pub, filename, new PageRange(1, 1));
+								convertPublicationToImage(pub, filename, new PageRange(2));
+							}
 						}
-						
-						boolean exists = false;
-						OutputStream os = null;
-						if(SystemUtils.IS_OS_WINDOWS) {
-							File f = new File(oDirTmp + File.separator + iTmp + ".jpg");
-							os = new FileOutputStream(f);
-							exists = f.exists();
-						} else {
-							SmbFile f = new SmbFile(oDirTmp + File.separator + iTmp + ".jpg");
-							os = f.getOutputStream();
-							exists = f.exists();
-						}
-						
-						extractPageToJpeg(iTmp, jpgIs, os);
-					} catch(Exception ex) {
-						ex.printStackTrace();
+					} catch(IOException | DocumentException | TaskException e) {
+						e.printStackTrace();
 					}
 				};
 			}.start();
 		}
+	}
+	
+	private void convertPublicationToImage(TPublication pub, final String filename, PageRange range) throws MalformedURLException, IOException, DocumentException, TaskException {
+		InputStream is = null;
+		if(SystemUtils.IS_OS_WINDOWS) {
+			is = new FileInputStream(new File(filename));
+		} else {
+			is = new SmbFile(filename).getInputStream();
+		}
+		
+		PdfToJpegParameters params = new PdfToJpegParameters();
+		params.setSource(PdfStreamSource.newInstanceNoPassword(is, pub.getJudul()));
+		params.setOutput(new ADirectoryTaskOutput(filename.replace(".pdf", "")));
+		params.addPageRange(range);
+		params.setOverwrite(true);
+		
+		PdfToImageConverter<AbstractPdfToMultipleImageParameters> task = new PdfToImageConverter<>();
+		task.before(params);
+		task.execute(params);
+		task.after();
+	}
+	
+	public static class PdfToImageConverter<T extends AbstractPdfToMultipleImageParameters> extends BasePdfToImageTask<AbstractPdfToImageParameters> {
+		private static final Logger LOG = LoggerFactory.getLogger(PdfToImageConverter.class);
+	    private PdfSourceOpener<org.icepdf.core.pobjects.Document> sourceOpener = new DefaultPdfSourceOpener();
+	    private org.icepdf.core.pobjects.Document pdfDocument = null;
+
+	    public void before(AbstractPdfToImageParameters parameters) throws TaskExecutionException {
+	        super.before(parameters);
+	    }
+	    
+		@Override
+		public void execute(AbstractPdfToImageParameters parameters) throws TaskException {
+			try {
+			pdfDocument = parameters.getSource().open(sourceOpener);
+			Set<Integer> requestedPages = ((AbstractPdfToMultipleImageParameters) parameters).getPages(pdfDocument.getNumberOfPages());
+			for (int currentPage : requestedPages) {
+				if(((ADirectoryTaskOutput) parameters.getOutput()).exists(currentPage + "")) {
+					continue;
+				}
+				
+				File tmpFile = createTemporaryBuffer();
+				getWriter().openWriteDestination(tmpFile, parameters);
+				LOG.debug("Starting convert {} page {}.", parameters.getSource().getName(), currentPage);
+				getWriter().write(toBufferedImage(pdfDocument, zeroBased(currentPage), parameters), parameters);
+	            getWriter().closeDestination();
+	            ((ADirectoryTaskOutput) parameters.getOutput()).accept(tmpFile, currentPage + "");
+			}
+			} catch (Exception e) {
+				LOG.error(e.getMessage() + " : " + parameters.getSource().getName(), e);
+			}
+		}
+		
+		@Override
+	    public void after() {
+	        super.after();
+	        if (pdfDocument != null) {
+	            pdfDocument.dispose();
+	        }
+	    }
+		
+		private int zeroBased(int oneBased) {
+	        return oneBased - 1;
+	    }
 	}
 }

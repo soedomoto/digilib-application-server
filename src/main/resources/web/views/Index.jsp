@@ -10,18 +10,54 @@
 	
 	<link rel="stylesheet" href="/assets/bootstrap/bootstrap.min.css">
 	<style type="text/css">
+		.book-holder {
+			padding-top: 15px;
+		}
 		.book {
-		    padding: 15px 0 0 0;
+		    /* padding: 15px 0 0 0; */
 		    margin: auto;
+			position: relative;
+			z-index: 1;
+			-webkit-box-shadow: 2px 2px 5px rgba(0,0,0,0.6);
+			-moz-box-shadow: 2px 2px 5px rgba(0,0,0,0.6);
+			-ms-box-shadow: 2px 2px 5px rgba(0,0,0,0.6);
+			-o-box-shadow: 2px 2px 5px rgba(0,0,0,0.6);
+			box-shadow: 2px 2px 5px rgba(0,0,0,0.6);
+			-webkit-transition: -webkit-transform 0.1s;
+			-webkit-transform: translate(0, 0);
+			-moz-transition: -moz-transform 0.1s;
+			-moz-transform: translate(0, 0);
+			-ms-transition: -ms-transform 0.1s;
+			-ms-transform: translate(0, 0);
+			-o-transition: -o-transform 0.1s;
+			-o-transform: translate(0, 0);
+			transition: transform 0.1s;
+			transform: translate(0, 0);
+		}
+		.book.hover {
+			z-index: 2;
+			background-color: white;
+			-webkit-transform: scale3d(1.1, 1.1, 1) translate3d(0, -5px, 0);
+			-moz-transform: scale3d(1.1, 1.1, 1) translate3d(0, -5px, 0);
+			-ms-transform: scale3d(1.1, 1.1, 1) translate3d(0, -5px, 0);
+			-o-transform: scale3d(1.1, 1.1, 1) translate3d(0, -5px, 0);
+			transform: scale3d(1.1, 1.1, 1) translate3d(0, -5px, 0);
 		}
 		.shelf {
-		    border-bottom: 30px solid #A1A194;
+			top: -15px;
+			z-index: -1;
+			background: url(/assets/turnjs/wall-bookshelf.png);
+			background-size: 100% 140%;
+			background-repeat: no-repeat;
+			height: 70px;
+
+		    /* border-bottom: 30px solid #A1A194;
 		    border-left: 20px solid transparent;
 		    border-right: 20px solid transparent;
 		    top: -15px;
-		    z-index: -1;
+		    z-index: -1; */
 		}
-		.shelf:after {
+		/* .shelf:after {
 			background:url(../pics/wall-bookshelf.png);
 			background-size:100%;
 			background-repeat: no-repeat;
@@ -31,7 +67,7 @@
 			display:block;
 			content:"";
 			margin-left:-38px;
-		}
+		} */
 	</style>
 	
 	<script src="/assets/jquery-1.9.1.min.js"></script>
@@ -39,7 +75,11 @@
 		jQuery(function($) {
 			$(".book").each(function() {
 				$(this).attr("src", $(this).attr("src-url"));
-				$(this).removeAttr("src-url")
+				$(this).removeAttr("src-url");
+			}).mouseenter(function() {
+				$(this).addClass('hover');
+			}).mouseleave(function() {
+				$(this).removeClass('hover');
 			})
 		});
 	</script>
@@ -50,9 +90,9 @@
 	    <div class="row">
 	    <% int p = 1; %>
 	    <% for(TPublication pub : pubs) { %>
-	    	<div class="col-xs-4 col-md-2">
-		    	<a target="_BLANK_" href="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") %>">
-		    		<img src-url="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + "/cover" %>" class="img-responsive book"/>
+	    	<div class="col-xs-4 col-md-2 book-holder">
+		    	<a target="_BLANK_" href="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + "/jpg" %>">
+		    		<img src-url="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + "/1/jpg" %>" class="img-responsive book"/>
 		    	</a>
 	    	</div>
 	    	
@@ -64,23 +104,9 @@
 	    	
 	    	<% p++; %>
 	    <% } %>
-	    	
-	        <!-- <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-12 shelf hidden-md hidden-lg"></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-12 shelf"></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-12 shelf hidden-md hidden-lg"></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-4 col-md-2"><img src="http://placehold.it/150x190" class="img-responsive book"/></div>
-	        <div class="col-xs-12 shelf"></div> -->
+	    <% if(p%3 != 0) { %>
+	    	<div class="col-xs-12 shelf"></div>
+	    <% } %>
 	    </div>
 	</div> 
 	
