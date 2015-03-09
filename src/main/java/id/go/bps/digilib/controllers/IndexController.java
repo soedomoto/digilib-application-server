@@ -3,11 +3,14 @@ package id.go.bps.digilib.controllers;
 import id.go.bps.digilib.models.TApplicationSettings;
 import id.go.bps.digilib.models.TPublication;
 
+import java.awt.Toolkit;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.sql.SQLException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -18,6 +21,7 @@ import jcifs.smb.SmbFile;
 import org.apache.commons.lang.SystemUtils;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -36,6 +40,12 @@ public class IndexController implements InitializingBean {
 	private Dao<TPublication, Object> tPublicationDao;
 	@Autowired
 	private Dao<TApplicationSettings, Object> tApplicationSettingsDao;
+	@Value("${flipbook.autoConvert}")
+	private boolean autoconvert;
+	@Value("${flipbook.autoConvertInterval}")
+	private int autoConvertInterval;
+	@Value("${flipbook.pageFormat}")
+	private String pageFormat;
 	
 	//@RequestMapping(method = RequestMethod.GET)
 	public String index(Model model, HttpServletRequest req, HttpServletResponse resp) {
@@ -58,16 +68,30 @@ public class IndexController implements InitializingBean {
 		}
 		
 		model.addAttribute("pubs", pubs);
+		model.addAttribute("format", pageFormat);
 		return "Index";
 	}
 
 	@Override
 	public void afterPropertiesSet() throws Exception {
+		if(autoconvert) {
+			//autoConvert();
+			new Timer().schedule(new TimerTask() {
+				@Override
+				public void run() {
+					autoConvert();
+				}
+			}, autoConvertInterval * 60 * 1000);
+		}
+	}
+	
+	private void autoConvert() {
 		new Thread() {
 			public void run() {
 				try {
-					Thread.sleep(5000);
+					Thread.sleep(1000);
 					System.out.println("----------- STARTING CONVERT IMAGE --------------------");
+					Toolkit.getDefaultToolkit().beep();
 					pdfController.convertAllPublicationsToImage();
 				} catch (Exception e) {
 					// TODO Auto-generated catch block

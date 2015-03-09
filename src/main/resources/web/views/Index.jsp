@@ -14,7 +14,6 @@
 			padding-top: 15px;
 		}
 		.book {
-		    /* padding: 15px 0 0 0; */
 		    margin: auto;
 			position: relative;
 			z-index: 1;
@@ -50,48 +49,20 @@
 			background-size: 100% 140%;
 			background-repeat: no-repeat;
 			height: 70px;
-
-		    /* border-bottom: 30px solid #A1A194;
-		    border-left: 20px solid transparent;
-		    border-right: 20px solid transparent;
-		    top: -15px;
-		    z-index: -1; */
 		}
-		/* .shelf:after {
-			background:url(../pics/wall-bookshelf.png);
-			background-size:100%;
-			background-repeat: no-repeat;
-			background-position:bottom left;
-			width:426px;
-			height:210px;
-			display:block;
-			content:"";
-			margin-left:-38px;
-		} */
 	</style>
 	
 	<script src="/assets/jquery-1.9.1.min.js"></script>
-	<script type="text/javascript">
-		jQuery(function($) {
-			$(".book").each(function() {
-				$(this).attr("src", $(this).attr("src-url"));
-				$(this).removeAttr("src-url");
-			}).mouseenter(function() {
-				$(this).addClass('hover');
-			}).mouseleave(function() {
-				$(this).removeClass('hover');
-			})
-		});
-	</script>
 </head>
 <body>
 	<% List<TPublication> pubs = (List<TPublication>) request.getAttribute("pubs"); %>
+	<% String format = (String) request.getAttribute("format"); %>
 	<div class="container">
 	    <div class="row">
 	    <% int p = 1; %>
 	    <% for(TPublication pub : pubs) { %>
 	    	<div class="col-xs-4 col-md-2 book-holder">
-		    	<a target="_BLANK_" href="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + "/jpg" %>">
+		    	<a target="_BLANK_" href="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + (format=="jpg" ? "/jpg" : "") %>">
 		    		<img src-url="<%= "/pdf/" + pub.getId_publikasi() + "/" + pub.getJudul().replace(" ", "-") + "/1/jpg" %>" class="img-responsive book"/>
 		    	</a>
 	    	</div>
@@ -111,5 +82,19 @@
 	</div> 
 	
 	<script src="/assets/bootstrap/bootstrap.min.js"></script>
+	<script type="text/javascript">
+		jQuery(function($) {
+			setTimeout(function() {
+				$(".book").each(function() {
+					$(this).attr("src", $(this).attr("src-url"));
+					$(this).removeAttr("src-url");
+				}).mouseenter(function() {
+					$(this).addClass('hover');
+				}).mouseleave(function() {
+					$(this).removeClass('hover');
+				})
+			}, 100);
+		});
+	</script>
 </body>
 </html>
