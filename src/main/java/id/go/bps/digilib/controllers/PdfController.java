@@ -1,15 +1,13 @@
 package id.go.bps.digilib.controllers;
 
-import static org.sejda.core.support.io.IOUtils.createTemporaryBuffer;
-import static org.sejda.impl.icepdf.component.PdfToBufferedImageProvider.toBufferedImage;
 import id.go.bps.digilib.models.TPublication;
 import id.go.bps.digilib.task.ADirectoryTaskOutput;
-import id.go.bps.digilib.task.BasePdfToImageTask;
+import id.go.bps.digilib.utils.FileUtils;
+import id.go.bps.digilib.utils.PdfToImageConverter;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -18,22 +16,16 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import jcifs.smb.SmbException;
 import jcifs.smb.SmbFile;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
-import org.sejda.impl.icepdf.component.DefaultPdfSourceOpener;
 import org.sejda.model.exception.TaskException;
-import org.sejda.model.exception.TaskExecutionException;
-import org.sejda.model.input.PdfSourceOpener;
 import org.sejda.model.input.PdfStreamSource;
-import org.sejda.model.parameter.image.AbstractPdfToImageParameters;
 import org.sejda.model.parameter.image.AbstractPdfToMultipleImageParameters;
 import org.sejda.model.parameter.image.PdfToJpegParameters;
 import org.sejda.model.pdf.page.PageRange;
@@ -57,6 +49,8 @@ import com.j256.ormlite.stmt.QueryBuilder;
 @Controller("pdfController")
 @RequestMapping("/pdf")
 public class PdfController {
+	//private static final Logger LOG = LoggerFactory.getLogger(PdfController.class);
+	
 	@Autowired
 	private String sharedPdf;
 	@Autowired
@@ -174,8 +168,8 @@ public class PdfController {
 		
 		String jpgName = filename.replace(".pdf", "") + File.separator + page + ".jpg";
 		while(true) {
-			if(exists(jpgName)) {
-				IOUtils.copy(getInputStream(jpgName), resp.getOutputStream());
+			if(FileUtils.exists(jpgName)) {
+				IOUtils.copy(FileUtils.getInputStream(jpgName), resp.getOutputStream());
 				break;
 			}
 			
@@ -183,37 +177,15 @@ public class PdfController {
 		}
 	}
 	
-	public boolean exists(String filename) throws MalformedURLException, SmbException {
-		if(SystemUtils.IS_OS_WINDOWS) {
-			if(new File(filename).exists()) {
-				return true;
-			}
-		} else {
-			SmbFile s = new SmbFile(filename);
-			if(s.exists()) {
-				return true;
-			}
-		}
+	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/{page}/text")
+	public void pdfPageText(@PathVariable("id") String id, @PathVariable("title") String title, @PathVariable("page") Integer page,  HttpServletResponse resp) 
+			throws FileNotFoundException, IOException, SQLException, DocumentException, TaskException {
+		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
+		qb.where().eq("id_publikasi", id);
+		TPublication pub = qb.queryForFirst();
+		String filename = getFilename(pub);
 		
-		return false;
-	}
-	
-	public InputStream getInputStream(String filename) throws IOException {
-		if(SystemUtils.IS_OS_WINDOWS) {
-			return new FileInputStream(filename);
-		} else {
-			SmbFile s = new SmbFile(filename);
-			return s.getInputStream();
-		}
-	}
-	
-	public OutputStream getOutputStream(String filename) throws IOException {
-		if(SystemUtils.IS_OS_WINDOWS) {
-			return new FileOutputStream(filename);
-		} else {
-			SmbFile s = new SmbFile(filename);
-			return s.getOutputStream();
-		}
+		extractPageText(pub, filename, new PageRange(page, page));
 	}
 	
 	public String getFilename(TPublication pub) {
@@ -271,12 +243,7 @@ public class PdfController {
 	}
 	
 	private void convertPublicationToImage(TPublication pub, final String filename, PageRange range) throws MalformedURLException, IOException, DocumentException, TaskException {
-		InputStream is = null;
-		if(SystemUtils.IS_OS_WINDOWS) {
-			is = new FileInputStream(new File(filename));
-		} else {
-			is = new SmbFile(filename).getInputStream();
-		}
+		InputStream is = FileUtils.getInputStream(filename);
 		
 		PdfToJpegParameters params = new PdfToJpegParameters();
 		params.setSource(PdfStreamSource.newInstanceNoPassword(is, pub.getJudul()));
@@ -290,47 +257,30 @@ public class PdfController {
 		task.after();
 	}
 	
-	public static class PdfToImageConverter<T extends AbstractPdfToMultipleImageParameters> extends BasePdfToImageTask<AbstractPdfToImageParameters> {
-		private static final Logger LOG = LoggerFactory.getLogger(PdfToImageConverter.class);
-	    private PdfSourceOpener<org.icepdf.core.pobjects.Document> sourceOpener = new DefaultPdfSourceOpener();
-	    private org.icepdf.core.pobjects.Document pdfDocument = null;
-
-	    public void before(AbstractPdfToImageParameters parameters) throws TaskExecutionException {
-	        super.before(parameters);
-	    }
-	    
-		@Override
-		public void execute(AbstractPdfToImageParameters parameters) throws TaskException {
-			try {
-			pdfDocument = parameters.getSource().open(sourceOpener);
-			Set<Integer> requestedPages = ((AbstractPdfToMultipleImageParameters) parameters).getPages(pdfDocument.getNumberOfPages());
-			for (int currentPage : requestedPages) {
-				if(((ADirectoryTaskOutput) parameters.getOutput()).exists(currentPage + "")) {
-					continue;
-				}
+	private void extractPageText(TPublication pub, final String filename, PageRange range) throws IOException, TaskException {
+		InputStream is = FileUtils.getInputStream(filename);
+		
+		PdfToJpegParameters params = new PdfToJpegParameters();
+		params.setSource(PdfStreamSource.newInstanceNoPassword(is, pub.getJudul()));
+		params.setOutput(new ADirectoryTaskOutput(filename.replace(".pdf", "")));
+		params.addPageRange(range);
+		params.setOverwrite(true);
+		
+		PdfToImageConverter<AbstractPdfToMultipleImageParameters> task = new PdfToImageConverter<>();
+		task.before(params);
+		task.getPageText(params);
+		/*Map<Integer, List<LineText>> pageText = task.getPageText();
+		for(int p=0; p<pageText.size(); p++) {
+			for(LineText line : pageText.get(p)) {
+				Float bounds = line.getBounds();
 				
-				File tmpFile = createTemporaryBuffer();
-				getWriter().openWriteDestination(tmpFile, parameters);
-				LOG.debug("Starting convert {} page {}.", parameters.getSource().getName(), currentPage);
-				getWriter().write(toBufferedImage(pdfDocument, zeroBased(currentPage), parameters), parameters);
-	            getWriter().closeDestination();
-	            ((ADirectoryTaskOutput) parameters.getOutput()).accept(tmpFile, currentPage + "");
+				String texts = "";
+				List<WordText> words = line.getWords();
+				for(WordText text : words) {
+					texts += text.getText();
+				}
+				LOG.debug("Page {} : x={}, y={}, w={}, h={}, text={}", pageText.keySet().toArray()[p], bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight(), texts);
 			}
-			} catch (Exception e) {
-				LOG.error(e.getMessage() + " : " + parameters.getSource().getName(), e);
-			}
-		}
-		
-		@Override
-	    public void after() {
-	        super.after();
-	        if (pdfDocument != null) {
-	            pdfDocument.dispose();
-	        }
-	    }
-		
-		private int zeroBased(int oneBased) {
-	        return oneBased - 1;
-	    }
+		}*/
 	}
 }

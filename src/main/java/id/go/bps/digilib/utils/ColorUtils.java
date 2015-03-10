@@ -7,7 +7,7 @@ import java.awt.Color;
  * 
  * @author <a href="mailto:info@geosoft.no">GeoSoft</a>
  */   
-public class ColorUtil {
+public class ColorUtils {
 	/**
 	 * Encode color into hex color without #
 	 * @param rgb
@@ -62,7 +62,7 @@ public class ColorUtil {
    */
   public static Color blend (Color color1, Color color2)
   {
-    return ColorUtil.blend (color1, color2, 0.5);
+    return ColorUtils.blend (color1, color2, 0.5);
   }
   
 
@@ -168,7 +168,7 @@ public class ColorUtil {
    */
   public static double colorDistance (double[] color1, double[] color2)
   {
-    return ColorUtil.colorDistance (color1[0], color1[1], color1[2],
+    return ColorUtils.colorDistance (color1[0], color1[1], color1[2],
                                     color2[0], color2[1], color2[2]);
   }
 
@@ -189,7 +189,7 @@ public class ColorUtil {
     color1.getColorComponents (rgb1);
     color2.getColorComponents (rgb2);    
 
-    return ColorUtil.colorDistance (rgb1[0], rgb1[1], rgb1[2],
+    return ColorUtils.colorDistance (rgb1[0], rgb1[1], rgb1[2],
                                     rgb2[0], rgb2[1], rgb2[2]);
   }
 
@@ -206,8 +206,8 @@ public class ColorUtil {
   public static boolean isDark (double r, double g, double b)
   {
     // Measure distance to white and black respectively
-    double dWhite = ColorUtil.colorDistance (r, g, b, 1.0, 1.0, 1.0);
-    double dBlack = ColorUtil.colorDistance (r, g, b, 0.0, 0.0, 0.0);
+    double dWhite = ColorUtils.colorDistance (r, g, b, 1.0, 1.0, 1.0);
+    double dBlack = ColorUtils.colorDistance (r, g, b, 0.0, 0.0, 0.0);
 
     return dBlack < dWhite;
   }
