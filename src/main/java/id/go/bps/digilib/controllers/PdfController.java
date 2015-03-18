@@ -6,7 +6,6 @@ import id.go.bps.digilib.utils.FileUtils;
 import id.go.bps.digilib.utils.PdfToImageConverter;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,13 +23,17 @@ import jcifs.smb.SmbFile;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.SystemUtils;
+import org.icepdf.core.pobjects.Document;
+import org.icepdf.core.pobjects.PDimension;
+import org.icepdf.core.pobjects.Page;
+import org.sejda.impl.icepdf.component.DefaultPdfSourceOpener;
+import org.sejda.impl.itext.component.input.PdfSourceOpeners;
 import org.sejda.model.exception.TaskException;
+import org.sejda.model.exception.TaskIOException;
 import org.sejda.model.input.PdfStreamSource;
 import org.sejda.model.parameter.image.AbstractPdfToMultipleImageParameters;
 import org.sejda.model.parameter.image.PdfToJpegParameters;
 import org.sejda.model.pdf.page.PageRange;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -38,13 +41,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
-import com.itextpdf.text.Document;
-import com.itextpdf.text.DocumentException;
-import com.itextpdf.text.pdf.PdfCopy;
-import com.itextpdf.text.pdf.PdfImportedPage;
-import com.itextpdf.text.pdf.PdfReader;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.stmt.QueryBuilder;
+import com.lowagie.text.DocumentException;
+import com.lowagie.text.pdf.PdfImportedPage;
+import com.lowagie.text.pdf.PdfReader;
+import com.lowagie.text.pdf.PdfSmartCopy;
 
 @Controller("pdfController")
 @RequestMapping("/pdf")
@@ -58,29 +60,20 @@ public class PdfController {
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}")
 	public String viewer(@PathVariable("id") final String id, @PathVariable("title") final String title, Model model, final HttpServletRequest req) 
-			throws FileNotFoundException, IOException, SQLException {
+			throws FileNotFoundException, IOException, SQLException, TaskIOException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
 		qb.where().eq("id_publikasi", id);
-		TPublication pub = qb.queryForFirst();
-		
-		String filename = getFilename(pub);
-		InputStream is = null;
-		if(SystemUtils.IS_OS_WINDOWS) {
-			is = new FileInputStream(new File(filename));
-		} else {
-			is = new SmbFile(filename).getInputStream();
-		}
-		
-		final PdfReader reader = new PdfReader(is);
+		final TPublication pub = qb.queryForFirst();
+		final String filename = getFilename(pub);
 		
 		model.addAttribute("publication", pub);
 		model.addAttribute("properties", new HashMap<String, Object>() {
 			private static final long serialVersionUID = 1L;
 			{
-				put("numPages", reader.getNumberOfPages());
+				put("numPages", pageCount(pub, filename));
 				put("baseUrl", req.getScheme() + "://" + req.getServerName() + ":" + req.getServerPort() + 
 						req.getContextPath() + "/pdf/" + id + "/" + title);
-				put("docSize", reader.getPageSize(3));
+				put("docSize", pageSize(pub, filename, 3));
 				put("format", "pdf");
 			}
 		});
@@ -90,29 +83,20 @@ public class PdfController {
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/jpg")
 	public String viewerJpg(@PathVariable("id") final String id, @PathVariable("title") final String title, Model model, final HttpServletRequest req) 
-			throws FileNotFoundException, IOException, SQLException {
+			throws FileNotFoundException, IOException, SQLException, TaskIOException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
 		qb.where().eq("id_publikasi", id);
-		TPublication pub = qb.queryForFirst();
-		
-		String filename = getFilename(pub);
-		InputStream is = null;
-		if(SystemUtils.IS_OS_WINDOWS) {
-			is = new FileInputStream(new File(filename));
-		} else {
-			is = new SmbFile(filename).getInputStream();
-		}
-		
-		final PdfReader reader = new PdfReader(is);
+		final TPublication pub = qb.queryForFirst();
+		final String filename = getFilename(pub);
 		
 		model.addAttribute("publication", pub);
 		model.addAttribute("properties", new HashMap<String, Object>() {
 			private static final long serialVersionUID = 1L;
 			{
-				put("numPages", reader.getNumberOfPages());
+				put("numPages", pageCount(pub, filename));
 				put("baseUrl", req.getScheme() + "://" + req.getServerName() + ":" + req.getServerPort() + 
 						req.getContextPath() + "/pdf/" + id + "/" + title);
-				put("docSize", reader.getPageSize(3));
+				put("docSize", pageSize(pub, filename, 3));
 				put("format", "jpg");
 			}
 		});
@@ -127,13 +111,7 @@ public class PdfController {
 		qb.where().eq("id_publikasi", id);
 		TPublication pub = qb.queryForFirst();
 		String filename = getFilename(pub);
-		
-		InputStream is = null;
-		if(SystemUtils.IS_OS_WINDOWS) {
-			is = new FileInputStream(new File(filename));
-		} else {
-			is = new SmbFile(filename).getInputStream();
-		}
+		InputStream is = FileUtils.getInputStream(filename);
 		
 		resp.setContentType("application/pdf");
 		IOUtils.copyLarge(is, resp.getOutputStream());
@@ -141,18 +119,12 @@ public class PdfController {
 	
 	@RequestMapping(method = RequestMethod.GET, value = "/{id}/{title}/{page}")
 	public void pdfPage(@PathVariable("id") String id, @PathVariable("title") String title, @PathVariable("page") Integer page,  HttpServletResponse resp) 
-			throws FileNotFoundException, IOException, SQLException, DocumentException {
+			throws FileNotFoundException, IOException, SQLException, TaskIOException, DocumentException {
 		QueryBuilder<TPublication, Object> qb = tPublicationDao.queryBuilder();
 		qb.where().eq("id_publikasi", id);
 		TPublication pub = qb.queryForFirst();
 		String filename = getFilename(pub);
-		
-		InputStream is = null;
-		if(SystemUtils.IS_OS_WINDOWS) {
-			is = new FileInputStream(new File(filename));
-		} else {
-			is = new SmbFile(filename).getInputStream();
-		}
+		InputStream is = FileUtils.getInputStream(filename);
 		
 		resp.setContentType("application/pdf");
 		extractPage(page, is, resp.getOutputStream());
@@ -201,11 +173,10 @@ public class PdfController {
 				pub.getJudul().replace(" ", "-") + ".jpg";
 	}
 	 
-	private void extractPage(int page, InputStream input, OutputStream output) throws IOException, DocumentException {
-		PdfReader reader = new PdfReader(input);
-		Document document = new Document(reader.getPageSizeWithRotation(1));
-		PdfCopy writer = new PdfCopy(document, output);
-        //writer.setFullCompression();
+	private void extractPage(int page, InputStream is, OutputStream os) throws IOException, TaskIOException, DocumentException {
+		PdfReader reader = PdfStreamSource.newInstanceNoPassword(is, "Whole PDF").open(PdfSourceOpeners.newPartialReadOpener());
+		com.lowagie.text.Document document = new com.lowagie.text.Document(reader.getPageSizeWithRotation(1));
+		PdfSmartCopy writer = new PdfSmartCopy(document, os);
         document.open();
         PdfImportedPage pdfPage = writer.getImportedPage(reader, page);
         writer.addPage(pdfPage);
@@ -213,7 +184,7 @@ public class PdfController {
         writer.close();
 	}
 	
-	public void convertAllPublicationsToImage() throws SQLException, IOException, DocumentException, TaskException {
+	public void convertAllPublicationsToImage() throws SQLException, IOException, TaskException {
 		List<TPublication> pubs = tPublicationDao.queryForAll();
 		Iterator<TPublication> itr = pubs.iterator();
 		while(itr.hasNext()) {
@@ -234,7 +205,7 @@ public class PdfController {
 								convertPublicationToImage(pub, filename, new PageRange(2));
 							}
 						}
-					} catch(IOException | DocumentException | TaskException e) {
+					} catch(IOException | TaskException e) {
 						e.printStackTrace();
 					}
 				};
@@ -242,7 +213,20 @@ public class PdfController {
 		}
 	}
 	
-	private void convertPublicationToImage(TPublication pub, final String filename, PageRange range) throws MalformedURLException, IOException, DocumentException, TaskException {
+	private int pageCount(TPublication pub, String filename) throws TaskIOException, IOException {
+		InputStream is = FileUtils.getInputStream(filename);
+		Document document = PdfStreamSource.newInstanceNoPassword(is, pub.getJudul()).open(new DefaultPdfSourceOpener());
+		return document.getNumberOfPages();
+	}
+	
+	private PDimension pageSize(TPublication pub, String filename, int pageNumber) throws TaskIOException, IOException {
+		InputStream is = FileUtils.getInputStream(filename);
+		Document document = PdfStreamSource.newInstanceNoPassword(is, pub.getJudul()).open(new DefaultPdfSourceOpener());
+		Page page = document.getPageTree().getPage(pageNumber);
+		return page.getSize(0);
+	}
+	
+	private void convertPublicationToImage(TPublication pub, final String filename, PageRange range) throws MalformedURLException, IOException, TaskException {
 		InputStream is = FileUtils.getInputStream(filename);
 		
 		PdfToJpegParameters params = new PdfToJpegParameters();

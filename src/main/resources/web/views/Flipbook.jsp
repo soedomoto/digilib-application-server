@@ -1,4 +1,4 @@
-<%@page import="com.itextpdf.text.Rectangle"%>
+<%@page import="org.icepdf.core.pobjects.PDimension"%>
 <%@page import="java.util.HashMap"%>
 <%@page import="java.util.Map"%>
 <%@page import="id.go.bps.digilib.models.TPublication"%>
@@ -7,7 +7,7 @@
 
 <% TPublication pub = (TPublication) request.getAttribute("publication"); %>
 <% Map<String, Object> properties = (HashMap<String, Object>) request.getAttribute("properties"); %>
-<% Rectangle docSize = (Rectangle) properties.get("docSize"); %>
+<% PDimension docSize = (PDimension) properties.get("docSize"); %>
 <% String format = (String) properties.get("format"); %>
 <html lang="en">
 <head>
